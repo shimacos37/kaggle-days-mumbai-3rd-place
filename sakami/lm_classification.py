@@ -415,7 +415,7 @@ def main(debug: bool = False):
             break
 
     # save
-    save_dir = Path("./output/")
+    save_dir = Path("./output_v10/")
     save_dir.mkdir(exist_ok=True)
 
     valid_out_df = pd.DataFrame()
