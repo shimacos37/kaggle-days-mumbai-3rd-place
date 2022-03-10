@@ -1,0 +1,116 @@
+FROM nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04
+ARG PYTHON_VERSION=3.7
+
+RUN apt-get update \
+     && apt-get install --yes software-properties-common \
+     && add-apt-repository ppa:neovim-ppa/stable \
+     && apt-get update \
+     && apt-get install --yes  --no-install-recommends \
+     build-essential \
+     cmake \
+     curl \
+     git \
+     gcc \
+     htop \
+     libgtk2.0-dev \
+     libboost-all-dev \
+     libgl1-mesa-dev \
+     libssl-dev \
+     libreadline-dev \
+     libyaml-dev \
+     libxml2-dev \
+     libxslt-dev \
+     libncurses5-dev \
+     libncursesw5-dev \
+     software-properties-common \
+     ssh-client \
+     && apt-get clean
+
+
+RUN curl -o ~/miniconda.sh -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+     && chmod +x ~/miniconda.sh \
+     && ~/miniconda.sh -b -p /opt/conda \
+     && rm ~/miniconda.sh \
+     && /opt/conda/bin/conda install -y python=$PYTHON_VERSION numpy pyyaml scipy ipython mkl mkl-include cython typing \
+     && /opt/conda/bin/conda clean -ya
+
+RUN /opt/conda/bin/conda create -n rapids-0.18 -c rapidsai -c nvidia -c conda-forge \
+    -c defaults rapids=0.18 python=3.7 cudatoolkit=10.2
+
+RUN ln -s /usr/local/cuda/bin/nvcc /opt/conda/envs/rapids-0.18/bin/ \
+     && ln -s /usr/local/cuda/bin/nvcc.profile /opt/conda/envs/rapids-0.18/bin/ \
+     && ln -s  /usr/local/cuda/nvvm /opt/conda/envs/rapids-0.18/
+ENV CPATH=/usr/local/cuda-10.2/targets/x86_64-linux/include:$CPATH
+ENV PATH /opt/conda/envs/rapids-0.18/bin:$PATH
+
+
+RUN  pip install opencv-python \
+     albumentations \
+     tqdm \
+     joblib \
+     torch==1.7.0 \
+     torchvision \
+     efficientnet-pytorch \
+     pretrainedmodels \
+     segmentation-models-pytorch \
+     pytorch-lightning \
+     hydra-core \
+     hydra_colorlog \
+     google-cloud-storage \
+     seaborn \
+     plotly \
+     nilearn \
+     h5py \
+     wandb \
+     jupyterlab \
+     jupyterlab_code_formatter \
+     black \
+     mypy \
+     lightgbm \
+     flake8 \
+     timm \
+     xgboost \
+     pydicom \
+     rising \
+     threadpoolctl 
+# RUN . activate rapids-0.18 \
+#      && git clone https://github.com/open-mmlab/mmdetection.git \
+#      && cd mmdetection \
+#      && pip install -r requirements/build.txt \
+#      && pip install -v -e .
+
+RUN pip install transformers
+
+RUN pip install kaggle \
+     && apt install -y libopenmpi-dev \
+     && pip install deepspeed mpi4py fairscale
+
+RUN pip install --upgrade timm
+
+# RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin \
+#  && mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600 \
+#  && apt-get -y install software-properties-common \
+#  && apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub \
+#  && add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /" \
+#  && apt-get update \
+#  && apt-get -y install cuda 
+
+RUN pip install torch==1.8.1+cu102 torchvision==0.9.1+cu102 torchaudio==0.8.1 -f https://download.pytorch.org/whl/torch_stable.html
+WORKDIR /root/workdir
+
+# RUN . activate rapids-0.18 \
+#      && wget https://github.com/NVIDIA/TRTorch/releases/download/v0.2.0/trtorch-0.2.0-cp37-cp37m-linux_x86_64.whl \
+#      && pip install trtorch-0.2.0-cp37-cp37m-linux_x86_64.whl nvidia-pyindex \
+#      && pip install nvidia-tensorrt \
+#      && rm trtorch-0.2.0-cp37-cp37m-linux_x86_64.whl
+
+RUN apt install -y software-properties-common \
+     && add-apt-repository ppa:ubuntu-toolchain-r/test \
+     && apt update \
+     && apt install --only-upgrade -y libstdc++6 \
+     && apt clean
+
+WORKDIR /root/workdir
+COPY ./entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
