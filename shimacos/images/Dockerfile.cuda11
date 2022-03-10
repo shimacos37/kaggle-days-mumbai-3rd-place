@@ -1,0 +1,59 @@
+FROM rapidsai/rapidsai:21.10-cuda11.0-runtime-ubuntu18.04-py3.7
+
+RUN apt update \
+     && apt install --yes  --no-install-recommends \
+     cuda-toolkit-11-0 \
+     gcc \
+     ssh-client \
+     software-properties-common \
+     libopenmpi-dev \
+     && add-apt-repository ppa:ubuntu-toolchain-r/test \
+     && apt update \
+     && apt install --only-upgrade -y libstdc++6 \
+     && apt clean \
+     && rm -rf /var/lib/apt/lists/*
+
+RUN ln -s /usr/local/cuda/bin/nvcc /opt/conda/envs/rapids/bin/ \
+     && ln -s /usr/local/cuda/bin/nvcc.profile /opt/conda/envs/rapids/bin/ \
+     && ln -s  /usr/local/cuda/nvvm /opt/conda/envs/rapids/
+
+ENV CPATH=/usr/local/cuda-11.0/targets/x86_64-linux/include:$CPATH
+ENV TORCH_CUDA_ARCH_LIST="Kepler;Kepler+Tesla;Maxwell;Maxwell+Tegra;Pascal;Volta;Turing"
+
+RUN  source activate rapids \
+     && pip install -f https://download.pytorch.org/whl/torch_stable.html \
+     opencv-python \
+     albumentations \
+     tqdm \
+     joblib \
+     segmentation-models-pytorch \
+     pytorch-lightning \
+     torch==1.7.1+cu110 \
+     torchvision==0.8.2+cu110 \
+     hydra-core \
+     hydra_colorlog \
+     google-cloud-storage \
+     seaborn \
+     plotly \
+     nilearn \
+     h5py \
+     wandb \
+     jupyterlab \
+     jupyterlab_code_formatter \
+     black \
+     mypy \
+     lightgbm \
+     flake8 \
+     timm \
+     xgboost \
+     pydicom \
+     rising \
+     threadpoolctl \
+     transformers \
+     kaggle \
+     deepspeed \
+     mpi4py \
+     fairscale \
+     seqeval 
+
+WORKDIR /root/workdir

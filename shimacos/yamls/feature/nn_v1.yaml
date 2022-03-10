@@ -1,0 +1,5 @@
+# @package _global_
+feature:
+  version: v1
+  feature_cols: ["sim1", "sim2", "sim3"]
+  cat_cols: ["lang_code"]

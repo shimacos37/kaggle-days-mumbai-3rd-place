@@ -1,0 +1,109 @@
+defaults:
+  - hydra/job_logging: colorlog
+  - hydra/hydra_logging: colorlog
+  - feature: nn_v1
+
+runner: ClassificationRunner
+debug: False
+
+base:
+  gpu_id: ["0", "1", "2", "3"]
+  num_cores: 8
+  loss_class: nn.CrossEntropyLoss
+  scheduler_class: GradualWarmupScheduler
+  use_transformer_parameter: True
+  opt_class: AdamW
+
+data:
+  feature: ${feature}
+  dataset_class: TextDataset
+  workdir: ${env:PWD}
+  train_path: ${store.workdir}/input/${feature.version}/train.csv
+  test_path: ${store.workdir}/input/${feature.version}/test.csv
+  id_col: id
+  label_col: category
+  pred_col: ${data.label_col}_pred
+  n_fold: 0
+  seed: 777
+  image_size: 384
+  is_train: True
+  use_pseudo_label: False
+  # R, Cの組み合わせ毎に学習させるか
+  per_label: False
+  label: 0
+  use_resize_mix: True
+  resize_mix:
+    # alpha ~ betaの間のrandomな値のscaleで混ぜ合わされる
+    alpha: 0.1
+    beta: 0.8
+  mixup:
+    # alpha < 1で鍋型、alpha > 1で釣鐘型、alpha=1で一様分布
+    alpha: 0.2
+  normalize: imagenet
+  process_unseen: True
+  text:
+    backbone: ${model.text.backbone}
+  label_map:
+    association: 0
+    disagreement: 1
+    unbiased: 2
+
+model:
+  model_class: Bert
+  num_feature: # code内で補完
+  num_layers: 2
+  num_heads: 8 # Transformer用
+  embedding_size: 512
+  is_linear_head: False
+  is_pretrained: True
+  dropout_rate: 0.0
+  backbone: swin_base_patch4_window12_384_in22k
+  text:
+    is_avg_pool: True
+    backbone: xlm-roberta-large
+  num_classes: 3
+  normalize: ${data.normalize}
+  encoder: onehot
+  mlp:
+    n_layer: 3
+    hidden_size: 512
+
+store:
+  workdir: ${env:PWD}
+  model_name: baseline
+  root_path: ${store.workdir}/output/kaggledays_mumbai
+  gcs_path: kaggledays_mumbai/${store.model_name}/fold${data.n_fold}
+  save_path: ${store.root_path}/${store.model_name}/fold${data.n_fold}
+  feature_path: ${store.save_path}/feature
+  extact_feature_model_path: ${store.save_path}/model
+  model_path: ${store.save_path}/model
+  log_path: ${store.save_path}/logs
+  result_path: ${store.save_path}/result
+  save_feature: False
+  wandb_project:
+  gcs_project: dena-ai-training-29-gcp
+  bucket_name: kaggledays_championship
+
+train:
+  seed: ${data.seed}
+  epoch: 20
+  batch_size: 16
+  accumulation_steps: 4
+  learning_rate: 0.000001
+  warm_start: False
+  refinement_step: 8
+  scheduler:
+    patience: 5
+  callbacks:
+    monitor_metric: f1
+    mode: max
+    patience: 2
+
+test:
+  is_tta: False
+  is_validation: False
+  batch_size: 32
+
+hydra:
+  run:
+    dir: ${store.save_path}
